@@ -6,11 +6,11 @@ import { ReactNode } from 'react';
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider 
-      attribute="class" 
-      defaultTheme="system" 
-      enableSystem
-      storageKey="theme-preference"
-      disableTransitionOnChange
+      attribute="class"
+      defaultTheme="light"
+      enableSystem={true}
+      enableColorScheme={false}
+      storageKey="app-theme"
     >
       {children}
     </ThemeProvider>
