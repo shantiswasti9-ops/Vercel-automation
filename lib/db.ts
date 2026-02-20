@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { getAllProjects } from './projects';
 
 const BUILDS_FILE = path.join(process.cwd(), '.builds.json');
 
@@ -58,7 +59,8 @@ export async function storeBuildLog(build: BuildLog): Promise<void> {
 
 export async function getBuildLogs(
   repo?: string,
-  branch?: string
+  branch?: string,
+  projectId?: string
 ): Promise<BuildLog[]> {
   await loadBuilds();
 
@@ -72,6 +74,10 @@ export async function getBuildLogs(
     filtered = filtered.filter((b) => b.branch === branch);
   }
 
+  if (projectId) {
+    filtered = filtered.filter((b) => b.projectId === projectId);
+  }
+
   return filtered;
 }
 
@@ -81,6 +87,7 @@ export async function getStats(): Promise<{
   failedCount: number;
   repos: string[];
   branches: string[];
+  projects?: { id: string; name: string; count: number }[];
 }> {
   await loadBuilds();
 
@@ -89,12 +96,24 @@ export async function getStats(): Promise<{
   const successCount = buildsCache.filter((b) => b.status === 'success').length;
   const failedCount = buildsCache.filter((b) => b.status === 'failed').length;
 
+  // Get projects with build counts
+  const projects = await getAllProjects();
+  const projectsWithCounts = projects.map((project) => {
+    const count = buildsCache.filter((b) => b.projectId === project.id).length;
+    return {
+      id: project.id,
+      name: project.name,
+      count,
+    };
+  });
+
   return {
     totalBuilds: buildsCache.length,
     successCount,
     failedCount,
     repos,
     branches,
+    projects: projectsWithCounts,
   };
 }
 

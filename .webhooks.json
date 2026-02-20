@@ -1,0 +1,20 @@
+[
+  {
+    "id": "sds-1771574355879",
+    "name": "sds",
+    "displayName": "swastishanti",
+    "endpoint": "/api/webhooks/sds-1771574355879",
+    "projectId": "proj_1771570150169_6my5sb4ih",
+    "repoId": "https://github.com/shantiswasti9-ops/swasti-shanti-prod.git",
+    "isActive": true,
+    "expiryDate": "2026-03-14",
+    "createdAt": "2026-02-20T07:59:15.879Z",
+    "updatedAt": "2026-02-20T08:14:37.583Z",
+    "triggers": 0,
+    "branches": [
+      "main",
+      "apointment",
+      ""
+    ]
+  }
+]

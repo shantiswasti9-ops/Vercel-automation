@@ -96,7 +96,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'updateRepo') {
-      const { repoId, updates } = data;
+      const { repoId, branches, token } = data;
+      const updates: Partial<RepoConfig> = { branches };
+      if (token) {
+        updates.token = token;
+      }
       const project = await updateProjectRepo(projectId, repoId, updates);
       if (!project) {
         return NextResponse.json(

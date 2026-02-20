@@ -165,13 +165,39 @@ Fetch build history with optional filters.
 ]
 ```
 
-## Supported Repos & Branches
+## Project Management & Multi-Repo Support
 
-The system supports **unlimited repositories and branches**. Simply:
+The system supports **unlimited repositories and branches** through the **Projects interface** at `/projects`.
 
-1. Add the GitHub webhook to any repository
-2. Create corresponding Jenkins jobs with the naming pattern: `{repo}-{branch}`
-3. All push events will be captured and logged on the dashboard
+### Two Modes:
+
+**Single Repository Mode** - One repo with multiple branches
+```
+Project → Repository → [main, develop, staging, ...]
+```
+
+**Multiple Repository Mode** - Multiple repos with custom branches each
+```
+Project → [Repo 1 → [main, develop, ...], Repo 2 → [main, staging, ...], ...]
+```
+
+### How It Works:
+
+1. Create a project on `/projects` page
+2. Choose Single or Multiple repository mode
+3. Add repository URLs and branches to monitor
+4. For private repos, provide GitHub PAT token
+5. Create corresponding Jenkins jobs: `{repo}-{branch}`
+6. Add webhook to GitHub repos (same secret for all)
+7. Pushes to configured repos/branches trigger builds and appear on dashboard
+
+**📖 See [PROJECT_MANAGEMENT.md](PROJECT_MANAGEMENT.md) for:**
+- Detailed single vs multi-repo setup
+- Private repository PAT token configuration
+- Dashboard filtering by project/repo/branch
+- Webhook validation rules
+- Complete step-by-step walkthroughs
+- Troubleshooting guide
 
 ## Troubleshooting
 
