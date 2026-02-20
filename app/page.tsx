@@ -1,65 +1,286 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
+
+interface BuildLog {
+  repo: string;
+  branch: string;
+  commit: string;
+  author: string;
+  message: string;
+  buildId: string;
+  status: 'triggered' | 'running' | 'success' | 'failed';
+  timestamp: string;
+  jenkinsUrl: string;
+  duration?: number;
+}
+
+interface Stats {
+  totalBuilds: number;
+  successCount: number;
+  failedCount: number;
+  repos: string[];
+  branches: string[];
+}
+
+export default function Dashboard() {
+  const [builds, setBuilds] = useState<BuildLog[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [selectedRepo, setSelectedRepo] = useState<string>('');
+  const [selectedBranch, setSelectedBranch] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
+  }, [selectedRepo, selectedBranch]);
+
+  async function fetchData() {
+    try {
+      const params = new URLSearchParams();
+      if (selectedRepo) params.append('repo', selectedRepo);
+      if (selectedBranch) params.append('branch', selectedBranch);
+
+      const [logsRes, statsRes] = await Promise.all([
+        fetch(`/api/builds?${params}`),
+        fetch('/api/builds?type=stats'),
+      ]);
+
+      const logsData = await logsRes.json();
+      const statsData = await statsRes.json();
+
+      setBuilds(logsData || []);
+      setStats(statsData);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'failed':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'running':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'triggered':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const formatTime = (timestamp: string) => {
+    try {
+      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+    } catch {
+      return 'unknown';
+    }
+  };
+
+  if (loading) {
+    return <div className="p-8 text-center text-gray-500">Loading...</div>;
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            GitHub → Jenkins Pipeline
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-gray-600">
+            Auto-triggered builds on repository push events
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-sm text-gray-600">Total Builds</div>
+              <div className="text-3xl font-bold text-gray-900">
+                {stats.totalBuilds}
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-sm text-gray-600">Success</div>
+              <div className="text-3xl font-bold text-green-600">
+                {stats.successCount}
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-sm text-gray-600">Failed</div>
+              <div className="text-3xl font-bold text-red-600">
+                {stats.failedCount}
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-sm text-gray-600">Repositories</div>
+              <div className="text-3xl font-bold text-blue-600">
+                {stats.repos.length}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {stats && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Repository
+                </label>
+                <select
+                  value={selectedRepo}
+                  onChange={(e) => {
+                    setSelectedRepo(e.target.value);
+                    setSelectedBranch('');
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Repositories</option>
+                  {stats.repos.map((repo) => (
+                    <option key={repo} value={repo}>
+                      {repo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Branch
+                </label>
+                <select
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Branches</option>
+                  {stats.branches.map((branch) => (
+                    <option key={branch} value={branch}>
+                      {branch}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Build History
+            </h2>
+          </div>
+          <div className="overflow-x-auto">
+            {builds.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                No builds found. Push to a repository to trigger a build.
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                      Repo
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                      Branch
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                      Commit
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                      Author
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                      Time
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {builds.map((build) => (
+                    <tr key={build.buildId} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        {build.repo}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                          {build.branch}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-mono text-gray-600">
+                        <a
+                          href={build.jenkinsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline truncate max-w-xs inline-block"
+                        >
+                          {build.commit.slice(0, 7)}
+                        </a>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {build.author}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                            build.status
+                          )}`}
+                        >
+                          {build.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {formatTime(build.timestamp)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
-      </main>
-    </div>
+
+        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-blue-900 mb-3">
+            📋 Quick Setup Guide
+          </h3>
+          <div className="text-blue-800 space-y-2 text-sm">
+            <p>
+              <strong>1. Environment Variables:</strong> Set these in Vercel
+              dashboard:
+            </p>
+            <ul className="list-disc list-inside ml-4">
+              <li>GITHUB_WEBHOOK_SECRET (from GitHub repo settings)</li>
+              <li>JENKINS_URL (http://your-jenkins:8080)</li>
+              <li>JENKINS_USER (Jenkins username)</li>
+              <li>JENKINS_TOKEN (Jenkins API token)</li>
+            </ul>
+            <p className="mt-2">
+              <strong>2. GitHub Webhook:</strong> Add to repository settings:
+            </p>
+            <ul className="list-disc list-inside ml-4">
+              <li>Payload URL: https://your-domain.vercel.app/api/webhooks/github</li>
+              <li>Events: Push events</li>
+              <li>Secret: Same as GITHUB_WEBHOOK_SECRET</li>
+            </ul>
+            <p className="mt-2">
+              <strong>3. Jenkins:</strong> Create a parameterized job for each
+              repo+branch
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }

@@ -1,0 +1,20 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "env": {
+    "GITHUB_WEBHOOK_SECRET": {
+      "description": "GitHub webhook secret from repository settings"
+    },
+    "JENKINS_URL": {
+      "description": "Jenkins server URL (e.g., http://jenkins.example.com:8080)",
+      "default": "http://localhost:8080"
+    },
+    "JENKINS_USER": {
+      "description": "Jenkins username for authentication"
+    },
+    "JENKINS_TOKEN": {
+      "description": "Jenkins API token (from Jenkins user profile)"
+    }
+  }
+}
