@@ -5,9 +5,13 @@ import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { ProjectConfig, RepoConfig } from '@/lib/projects';
 
-interface Project extends ProjectConfig {
-  createdAt: string;
-  updatedAt: string;
+interface Project {
+  id: string;
+  name: string;
+  type: 'single' | 'multiple';
+  repos: RepoConfig[];
+  createdAt: string | Date;
+  updatedAt: string | Date;
 }
 
 function ThemeToggle() {

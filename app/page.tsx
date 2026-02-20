@@ -81,12 +81,12 @@ export default function Dashboard() {
   const [editExpiryDate, setEditExpiryDate] = useState<string>('');
 
   // Get repos and branches from selected project
-  const projectRepos = selectedProject
+  const projectRepos: any[] = selectedProject
     ? projects.find(p => p.id === selectedProject)?.repos || []
     : stats?.repos || [];
   
-  const repoBranches = selectedRepo && selectedProject
-    ? projectRepos.find(r => r.url === selectedRepo)?.branches || []
+  const repoBranches: string[] = selectedRepo && selectedProject
+    ? projectRepos.find((r: any) => r.url === selectedRepo)?.branches || []
     : stats?.branches || [];
 
   useEffect(() => {
@@ -756,7 +756,7 @@ export default function Dashboard() {
                       className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-green-300 dark:border-green-700 rounded-lg text-gray-900 dark:text-white"
                     >
                       <option value="">Select Repository</option>
-                      {webhookProjectId && projects.find(p => p.id === webhookProjectId)?.repos?.map(r => (
+                      {webhookProjectId && projects.find(p => p.id === webhookProjectId)?.repos?.map((r: any) => (
                         <option key={r.url} value={r.url}>{r.url}</option>
                       ))}
                     </select>
@@ -896,7 +896,7 @@ export default function Dashboard() {
                               className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-sm"
                             >
                               <option value="">Select Repository</option>
-                              {editProjectId && projects.find(p => p.id === editProjectId)?.repos?.map(r => (
+                              {editProjectId && projects.find(p => p.id === editProjectId)?.repos?.map((r: any) => (
                                 <option key={r.url} value={r.url}>{r.url}</option>
                               ))}
                             </select>

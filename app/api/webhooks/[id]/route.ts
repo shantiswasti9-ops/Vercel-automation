@@ -76,10 +76,11 @@ async function triggerJenkinsJob(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const webhookId = params.id;
+    const webhookId = id;
     const webhook = getWebhookById(webhookId);
 
     if (!webhook) {
@@ -143,7 +144,7 @@ export async function POST(
       message: head_commit?.message || pull_request?.title || 'Webhook triggered',
       buildId: `build-${Date.now()}`,
       status: jenkinsResult.success ? 'triggered' : 'failed',
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
       jenkinsUrl: `${process.env.JENKINS_URL || 'http://localhost:8080'}/job/${jenkinsJobName}`,
       projectId: webhook.projectId,
       projectName: webhook.displayName,
