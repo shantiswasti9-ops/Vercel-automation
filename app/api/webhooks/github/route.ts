@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { triggerJenkinsBuild } from '@/lib/jenkins';
 import { storeBuildLog } from '@/lib/db';
+import { getAllProjects, findProjectByRepo, normalizeGitUrl } from '@/lib/projects';
 
 const GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET || '';
 
@@ -69,6 +70,35 @@ export async function POST(request: NextRequest) {
       `[GitHub Webhook] Push to ${repoName}:${branch} by ${author}`
     );
 
+    // Check if this repo/branch is configured in projects
+    const projects = await getAllProjects();
+    const match = findProjectByRepo(projects, repoUrl);
+
+    if (!match) {
+      console.warn(`[GitHub Webhook] Repository not configured in projects: ${repoUrl}`);
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Repository not configured in projects',
+        },
+        { status: 400 }
+      );
+    }
+
+    const { project, repo } = match;
+
+    // Check if branch is configured for this repo
+    if (!repo.branches.includes(branch)) {
+      console.warn(`[GitHub Webhook] Branch not configured: ${branch}`);
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Branch ${branch} not configured for this repository`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Trigger Jenkins build
     const jobName = `${repoName}-${branch}`.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
     
@@ -79,7 +109,8 @@ export async function POST(request: NextRequest) {
         branch,
         commit: commitSha,
         message: commitMessage,
-      }
+      },
+      repo.token // Pass PAT token for private repos
     );
 
     // Log build event
@@ -93,11 +124,14 @@ export async function POST(request: NextRequest) {
       status: 'triggered',
       timestamp: new Date(),
       jenkinsUrl: buildResult.queueUrl || '',
+      projectId: project.id,
+      projectName: project.name,
     });
 
     return NextResponse.json(
       {
         success: true,
+        projectName: project.name,
         repo: repoName,
         branch,
         commit: commitSha,

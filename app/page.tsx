@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
 
 interface BuildLog {
   repo: string;
@@ -14,6 +15,8 @@ interface BuildLog {
   timestamp: string;
   jenkinsUrl: string;
   duration?: number;
+  projectId?: string;
+  projectName?: string;
 }
 
 interface Stats {
@@ -22,11 +25,13 @@ interface Stats {
   failedCount: number;
   repos: string[];
   branches: string[];
+  projects?: { id: string; name: string; count: number }[];
 }
 
 export default function Dashboard() {
   const [builds, setBuilds] = useState<BuildLog[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [selectedProject, setSelectedProject] = useState<string>('');
   const [selectedRepo, setSelectedRepo] = useState<string>('');
   const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -35,11 +40,12 @@ export default function Dashboard() {
     fetchData();
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
-  }, [selectedRepo, selectedBranch]);
+  }, [selectedProject, selectedRepo, selectedBranch]);
 
   async function fetchData() {
     try {
       const params = new URLSearchParams();
+      if (selectedProject) params.append('project', selectedProject);
       if (selectedRepo) params.append('repo', selectedRepo);
       if (selectedBranch) params.append('branch', selectedBranch);
 
@@ -90,15 +96,25 @@ export default function Dashboard() {
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            GitHub → Jenkins Pipeline
-          </h1>
-          <p className="text-gray-600">
-            Auto-triggered builds on repository push events
-          </p>
+        {/* Header */}
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              GitHub → Jenkins Pipeline
+            </h1>
+            <p className="text-gray-600">
+              Auto-triggered builds on repository push events
+            </p>
+          </div>
+          <Link
+            href="/projects"
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            ⚙️ Manage Projects
+          </Link>
         </div>
 
+        {/* Stats */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-white rounded-lg shadow p-6">
@@ -128,9 +144,31 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Filters */}
         {stats && (
           <div className="bg-white rounded-lg shadow p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Project
+                </label>
+                <select
+                  value={selectedProject}
+                  onChange={(e) => {
+                    setSelectedProject(e.target.value);
+                    setSelectedRepo('');
+                    setSelectedBranch('');
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Projects</option>
+                  {stats.projects?.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.name} ({proj.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Repository
@@ -172,6 +210,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Build History */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">
@@ -181,12 +220,19 @@ export default function Dashboard() {
           <div className="overflow-x-auto">
             {builds.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                No builds found. Push to a repository to trigger a build.
+                No builds found.{' '}
+                <Link href="/projects" className="text-blue-600 hover:underline">
+                  Create a project
+                </Link>{' '}
+                and push to a repository to trigger a build.
               </div>
             ) : (
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                      Project
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
                       Repo
                     </th>
@@ -210,6 +256,9 @@ export default function Dashboard() {
                 <tbody className="divide-y divide-gray-200">
                   {builds.map((build) => (
                     <tr key={build.buildId} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        {build.projectName || '-'}
+                      </td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">
                         {build.repo}
                       </td>
@@ -251,32 +300,30 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Info Box */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-blue-900 mb-3">
-            📋 Quick Setup Guide
+            📋 Getting Started
           </h3>
           <div className="text-blue-800 space-y-2 text-sm">
             <p>
-              <strong>1. Environment Variables:</strong> Set these in Vercel
-              dashboard:
+              <strong>1. Create a Project:</strong>{' '}
+              <Link href="/projects" className="text-blue-600 hover:underline">
+                Go to Projects
+              </Link>{' '}
+              and add your repositories
             </p>
-            <ul className="list-disc list-inside ml-4">
-              <li>GITHUB_WEBHOOK_SECRET (from GitHub repo settings)</li>
-              <li>JENKINS_URL (http://your-jenkins:8080)</li>
-              <li>JENKINS_USER (Jenkins username)</li>
-              <li>JENKINS_TOKEN (Jenkins API token)</li>
-            </ul>
-            <p className="mt-2">
-              <strong>2. GitHub Webhook:</strong> Add to repository settings:
+            <p>
+              <strong>2. Configure GitHub Webhooks:</strong> Add webhooks to your repositories pointing to
+              <code className="bg-white px-2 py-1 rounded ml-1">
+                /api/webhooks/github
+              </code>
             </p>
-            <ul className="list-disc list-inside ml-4">
-              <li>Payload URL: https://your-domain.vercel.app/api/webhooks/github</li>
-              <li>Events: Push events</li>
-              <li>Secret: Same as GITHUB_WEBHOOK_SECRET</li>
-            </ul>
-            <p className="mt-2">
-              <strong>3. Jenkins:</strong> Create a parameterized job for each
-              repo+branch
+            <p>
+              <strong>3. Create Jenkins Jobs:</strong> Create a parameterized job for each repo+branch combination
+            </p>
+            <p>
+              <strong>4. Monitor Builds:</strong> Push code and watch builds appear here in real-time
             </p>
           </div>
         </div>

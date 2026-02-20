@@ -19,7 +19,8 @@ interface BuildResult {
 
 export async function triggerJenkinsBuild(
   jobName: string,
-  options: BuildTriggerOptions
+  options: BuildTriggerOptions,
+  patToken?: string
 ): Promise<BuildResult> {
   if (!JENKINS_USER || !JENKINS_TOKEN) {
     console.warn('Jenkins credentials not configured - build not triggered');
@@ -34,12 +35,17 @@ export async function triggerJenkinsBuild(
 
     // Trigger build with parameters
     const triggerUrl = `${JENKINS_URL}/job/${jobName}/buildWithParameters`;
-    const params = {
+    const params: any = {
       GIT_BRANCH: options.branch,
       GIT_COMMIT: options.commit,
       GIT_URL: options.repo,
       COMMIT_MSG: options.message,
     };
+
+    // Add PAT token to parameters if private repo
+    if (patToken) {
+      params.GIT_TOKEN = patToken;
+    }
 
     const response = await axios.post(
       triggerUrl,

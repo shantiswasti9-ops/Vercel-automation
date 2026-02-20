@@ -14,6 +14,8 @@ interface BuildLog {
   timestamp: Date;
   jenkinsUrl: string;
   duration?: number;
+  projectId?: string;
+  projectName?: string;
 }
 
 let buildsCache: BuildLog[] = [];

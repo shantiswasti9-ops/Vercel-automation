@@ -39,7 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-# builds database
+# builds and projects database
 .builds.json
+.projects.json
+
 
 next-env.d.ts
