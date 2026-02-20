@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   description: "Automatic build triggering and live dashboard for GitHub push events",
 };
 
+// Force Vercel to bypass cache and ensure fresh deployment
+export const revalidate = 0;
+
 export default function RootLayout({
   children,
 }: Readonly<{
